@@ -1,4 +1,6 @@
 import os
+import re
+import tempfile
 
 import streamlit as st
 import requests
@@ -20,6 +22,52 @@ def normalize_fastapi_url(url: str) -> str:
 FASTAPI_URL = normalize_fastapi_url(os.getenv("FASTAPI_URL", "http://localhost:8002"))
 
 HF_OCR_URL = os.getenv("HF_OCR_URL", "")
+
+
+def get_hf_space_id(url: str) -> str:
+    if "/spaces/" in url:
+        return url.rstrip("/").split("/spaces/")[-1]
+    return url.strip("/")
+
+
+@st.cache_resource
+def get_hf_ocr_client(space_id: str):
+    from gradio_client import Client
+
+    hf_token = os.getenv("HF_TOKEN") or None
+    return Client(space_id, hf_token=hf_token)
+
+
+def run_ocr_via_hf_space(image_file, space_url: str) -> dict:
+    from gradio_client import handle_file
+
+    space_id = get_hf_space_id(space_url)
+    client = get_hf_ocr_client(space_id)
+
+    suffix = os.path.splitext(image_file.name)[1] or ".jpg"
+    with tempfile.NamedTemporaryFile(suffix=suffix, delete=False) as tmp:
+        tmp.write(image_file.getvalue())
+        tmp_path = tmp.name
+
+    full_text, details = client.predict(
+        handle_file(tmp_path),
+        api_name="/predict",
+    )
+
+    detections = [
+        line for line in details.splitlines()
+        if line.strip() and re.match(r"^\d+\.", line.strip())
+    ]
+
+    return {
+        "success": True,
+        "filename": image_file.name,
+        "extracted_text": full_text,
+        "detailed_results": [{"text": line} for line in detections],
+        "total_detections": len(detections),
+        "details_text": details,
+        "source": "huggingface",
+    }
 
 # 페이지 설정
 st.set_page_config(
@@ -126,8 +174,8 @@ st.header("2️⃣ 이미지 OCR (EasyOCR)")
 
 if HF_OCR_URL:
     st.info(
-        f"Render 무료 플랜(512MB)에서는 OCR이 실패할 수 있습니다. "
-        f"[Hugging Face OCR Space]({HF_OCR_URL})에서 안정적으로 테스트하세요."
+        f"OCR은 Render API 대신 **Hugging Face Space**에 직접 연결합니다. "
+        f"Space: [{get_hf_space_id(HF_OCR_URL)}]({HF_OCR_URL})"
     )
 
 # 1:2 비율로 컬럼 생성
@@ -153,27 +201,38 @@ with ocr_col1:
         
         # OCR 버튼
         if st.button("🔍 이미지 OCR 시작", key="ocr_image_btn", use_container_width=True):
-            with st.spinner("이미지 OCR 처리 중... (처음 실행 시 모델 다운로드로 시간이 걸릴 수 있습니다)"):
-                # 파일 포인터를 처음으로 되돌리기
+            with st.spinner(
+                "Hugging Face Space에서 OCR 처리 중..."
+                if HF_OCR_URL
+                else "이미지 OCR 처리 중... (처음 실행 시 모델 다운로드로 시간이 걸릴 수 있습니다)"
+            ):
                 image_file.seek(0)
-                
-                # FastAPI로 파일 전송
-                files = {
-                    "file": (image_file.name, image_file.getvalue(), f"image/{image_file.type}")
-                }
+
                 ########################################
                 ### 필수과제 2-(1): streamlit -> fastapi로 사용자가 업로드한 이미지 파일 파싱 요청
-                response = requests.post(f"{FASTAPI_URL}/ocr-image", files=files)
-                
-                if response.status_code == 200:
-                    result = response.json()
-                    # 세션 스테이트에 저장
-                    st.session_state.ocr_result = result
-                    st.success("✅ OCR 처리 완료!")
-                elif response.status_code == 503:
-                    st.warning(response.json().get("detail", "OCR은 Hugging Face Space에서 이용하세요."))
-                else:
-                    st.error(f"❌ 오류 발생: {response.json().get('detail', '알 수 없는 오류')}")
+                try:
+                    if HF_OCR_URL:
+                        result = run_ocr_via_hf_space(image_file, HF_OCR_URL)
+                    else:
+                        files = {
+                            "file": (image_file.name, image_file.getvalue(), f"image/{image_file.type}")
+                        }
+                        response = requests.post(f"{FASTAPI_URL}/ocr-image", files=files)
+
+                        if response.status_code == 200:
+                            result = response.json()
+                        elif response.status_code == 503:
+                            st.warning(response.json().get("detail", "OCR은 Hugging Face Space에서 이용하세요."))
+                            result = None
+                        else:
+                            st.error(f"❌ 오류 발생: {response.json().get('detail', '알 수 없는 오류')}")
+                            result = None
+
+                    if result:
+                        st.session_state.ocr_result = result
+                        st.success("✅ OCR 처리 완료!")
+                except Exception as exc:
+                    st.error(f"❌ OCR 연동 오류: {exc}")
                 ########################################
 
 with ocr_col2:
@@ -194,9 +253,17 @@ with ocr_col2:
         st.text_area(
             "추출된 전체 텍스트",
             value=result['extracted_text'],
-            height=400,
+            height=300,
             key="ocr_full_text"
         )
+
+        if result.get("details_text"):
+            st.text_area(
+                "상세 결과 (신뢰도)",
+                value=result["details_text"],
+                height=200,
+                key="ocr_details_text",
+            )
     else:
         st.info("👈 왼쪽에서 이미지 파일을 업로드하고 OCR을 시작하세요.")
 
