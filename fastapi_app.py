@@ -95,6 +95,9 @@ async def ocr_image(file: UploadFile = File(...)):
     이미지 파일을 업로드받아 EasyOCR로 텍스트를 추출합니다.
     """
     try:
+        import numpy as np
+        from PIL import Image
+
         # 파일 확장자 검증
         allowed_extensions = ['.jpg', '.jpeg', '.png', '.bmp', '.gif', '.webp']
         if not any(file.filename.lower().endswith(ext) for ext in allowed_extensions):
@@ -140,6 +143,13 @@ async def ocr_image(file: UploadFile = File(...)):
             "total_detections": len(extracted_data)
         }
     
+    except HTTPException:
+        raise
+    except ImportError as exc:
+        raise HTTPException(
+            status_code=503,
+            detail=f"Render 무료 플랜 API는 PDF 전용입니다. OCR은 Hugging Face Space에서 이용하세요: {OCR_SPACE_URL}",
+        ) from exc
     except Exception as e:
         raise HTTPException(status_code=500, detail=f"OCR 처리 중 오류 발생: {str(e)}")
 
