@@ -17,9 +17,6 @@ services:
     startCommand: streamlit run streamlit_app.py --server.port=$PORT --server.address=0.0.0.0 --server.headless=true
     envVars:
       - key: FASTAPI_URL
-        fromService:
-          type: web
-          name: pdf-ocr-api
-          property: host
+        value: https://pdf-ocr-api-bl6u.onrender.com
       - key: HF_OCR_URL
         value: https://huggingface.co/spaces/kangjinmo/easyocr-ko-en

@@ -6,9 +6,18 @@ from PIL import Image
 import io
 
 # FastAPI 서버 URL 설정 (로컬 기본값, Render에서는 환경 변수로 주입)
-FASTAPI_URL = os.getenv("FASTAPI_URL", "http://localhost:8002")
-if FASTAPI_URL and not FASTAPI_URL.startswith("http"):
-    FASTAPI_URL = f"https://{FASTAPI_URL}"
+def normalize_fastapi_url(url: str) -> str:
+    if not url:
+        return "http://localhost:8002"
+    if not url.startswith("http"):
+        url = f"https://{url}"
+    hostname = url.split("://", 1)[1].split("/")[0]
+    if "." not in hostname:
+        url = f"https://{hostname}.onrender.com"
+    return url.rstrip("/")
+
+
+FASTAPI_URL = normalize_fastapi_url(os.getenv("FASTAPI_URL", "http://localhost:8002"))
 
 HF_OCR_URL = os.getenv("HF_OCR_URL", "")
 
