@@ -1,0 +1,23 @@
+name: Sync OCR app to Hugging Face Space
+
+on:
+  push:
+    branches: [main]
+    paths:
+      - "hf-ocr/**"
+      - ".github/workflows/sync-hf-space.yml"
+  workflow_dispatch:
+
+jobs:
+  sync:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Install Hugging Face CLI
+        run: pip install "huggingface_hub[cli]"
+
+      - name: Upload hf-ocr folder to Space
+        env:
+          HF_TOKEN: ${{ secrets.HF_TOKEN }}
+        run: hf upload kangjinmo/easyocr-ko-en hf-ocr/ . --repo-type space
