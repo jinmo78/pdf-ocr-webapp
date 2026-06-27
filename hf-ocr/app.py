@@ -2,7 +2,14 @@ import easyocr
 import gradio as gr
 import numpy as np
 
-reader = easyocr.Reader(["ko", "en"], gpu=False)
+reader = None
+
+
+def get_reader():
+    global reader
+    if reader is None:
+        reader = easyocr.Reader(["ko", "en"], gpu=False)
+    return reader
 
 
 def run_ocr(image):
@@ -10,8 +17,9 @@ def run_ocr(image):
         return "이미지를 업로드해 주세요.", ""
 
     img_array = np.array(image)
-    result_detailed = reader.readtext(img_array)
-    result_simple = reader.readtext(img_array, detail=0)
+    ocr = get_reader()
+    result_detailed = ocr.readtext(img_array)
+    result_simple = ocr.readtext(img_array, detail=0)
 
     full_text = " ".join(result_simple)
     details = "\n".join(
