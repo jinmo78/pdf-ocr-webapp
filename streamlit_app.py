@@ -8,7 +8,7 @@ import requests
 from PIL import Image
 import io
 
-from receipt_parser import format_receipt_items, parse_receipt_items
+from receipt_parser import format_receipt_items
 
 # FastAPI 서버 URL 설정 (로컬 기본값, Render에서는 환경 변수로 주입)
 def normalize_fastapi_url(url: str) -> str:
