@@ -5,8 +5,6 @@ from fastapi import FastAPI, File, UploadFile, HTTPException
 from fastapi.middleware.cors import CORSMiddleware
 import PyPDF2
 import io
-import numpy as np
-from PIL import Image
 import uvicorn
 
 app = FastAPI(title="PDF & OCR API")
