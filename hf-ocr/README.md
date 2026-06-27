@@ -3,8 +3,8 @@ title: EasyOCR Korean English
 emoji: 🔍
 colorFrom: blue
 colorTo: purple
-sdk: streamlit
-sdk_version: 1.39.0
+sdk: gradio
+sdk_version: 4.44.1
 app_file: app.py
 pinned: false
 license: apache-2.0
@@ -17,4 +17,4 @@ license: apache-2.0
 - **엔진:** EasyOCR (`gpu=False`)
 - **지원 형식:** jpg, jpeg, png, bmp, gif, webp
 
-이미지를 업로드한 뒤 **OCR 시작** 버튼을 누르세요.
+이미지를 업로드하면 OCR 결과가 표시됩니다.
