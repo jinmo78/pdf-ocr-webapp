@@ -34,19 +34,17 @@ def run_ocr(image):
     return full_text, details
 
 
-with gr.Blocks(title="EasyOCR 한국어·영어") as demo:
-    gr.Markdown("# 🔍 이미지 OCR (EasyOCR)")
-    gr.Markdown("한국어·영어 이미지에서 텍스트를 추출합니다.")
-
-    with gr.Row():
-        with gr.Column():
-            image_input = gr.Image(type="pil", label="이미지 업로드")
-            run_btn = gr.Button("🔍 OCR 시작", variant="primary")
-        with gr.Column():
-            full_text = gr.Textbox(label="추출된 전체 텍스트", lines=8)
-            detail_text = gr.Textbox(label="상세 결과 (신뢰도)", lines=10)
-
-    run_btn.click(fn=run_ocr, inputs=image_input, outputs=[full_text, detail_text])
+demo = gr.Interface(
+    fn=run_ocr,
+    inputs=gr.Image(type="pil", label="이미지 업로드"),
+    outputs=[
+        gr.Textbox(label="추출된 전체 텍스트", lines=8),
+        gr.Textbox(label="상세 결과 (신뢰도)", lines=10),
+    ],
+    title="EasyOCR 한국어·영어",
+    description="한국어·영어 이미지에서 텍스트를 추출합니다.",
+    allow_flagging="never",
+)
 
 if __name__ == "__main__":
-    demo.launch()
+    demo.launch(ssr=False)

@@ -4,3 +4,4 @@ torchvision
 easyocr
 opencv-python-headless<4.3
 Pillow
+pydantic==2.10.6
