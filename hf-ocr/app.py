@@ -1,4 +1,3 @@
-import easyocr
 import gradio as gr
 import numpy as np
 
@@ -8,6 +7,8 @@ reader = None
 def get_reader():
     global reader
     if reader is None:
+        import easyocr
+
         reader = easyocr.Reader(["ko", "en"], gpu=False)
     return reader
 
@@ -46,6 +47,6 @@ with gr.Blocks(title="EasyOCR 한국어·영어") as demo:
             detail_text = gr.Textbox(label="상세 결과 (신뢰도)", lines=10)
 
     run_btn.click(fn=run_ocr, inputs=image_input, outputs=[full_text, detail_text])
-    image_input.change(fn=run_ocr, inputs=image_input, outputs=[full_text, detail_text])
 
-demo.launch()
+if __name__ == "__main__":
+    demo.launch()
