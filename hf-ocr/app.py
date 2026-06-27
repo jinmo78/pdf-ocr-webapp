@@ -43,8 +43,8 @@ demo = gr.Interface(
     ],
     title="EasyOCR 한국어·영어",
     description="한국어·영어 이미지에서 텍스트를 추출합니다.",
-    allow_flagging="never",
+    flagging_mode="never",
 )
 
 if __name__ == "__main__":
-    demo.launch(ssr=False)
+    demo.launch()
