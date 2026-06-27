@@ -4,7 +4,6 @@ from typing import Any
 from fastapi import FastAPI, File, UploadFile, HTTPException
 from fastapi.middleware.cors import CORSMiddleware
 import PyPDF2
-import easyocr
 import io
 import numpy as np
 from PIL import Image
@@ -21,8 +20,17 @@ app.add_middleware(
     allow_headers=["*"],
 )
 
-# EasyOCR reader 초기화 (한국어, 영어)
-reader = easyocr.Reader(['ko', 'en'], gpu=False)
+# EasyOCR reader (첫 OCR 요청 시 초기화 — Render 시작 속도 개선)
+reader = None
+
+
+def get_reader():
+    global reader
+    if reader is None:
+        import easyocr
+
+        reader = easyocr.Reader(["ko", "en"], gpu=False)
+    return reader
 
 
 @app.get("/")
@@ -99,11 +107,12 @@ async def ocr_image(file: UploadFile = File(...)):
         
         ########################################
         ### 필수과제 2-(2): EasyOCR로 텍스트 추출
+        ocr_reader = get_reader()
         # EasyOCR로 텍스트 추출 (상세 정보 포함)
-        result_detailed = reader.readtext(img_array)
+        result_detailed = ocr_reader.readtext(img_array)
         
         # 텍스트만 추출
-        result_simple = reader.readtext(img_array, detail=0)
+        result_simple = ocr_reader.readtext(img_array, detail=0)
         
         # 결과 정리
         extracted_data = []

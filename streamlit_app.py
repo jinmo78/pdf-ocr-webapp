@@ -10,6 +10,8 @@ FASTAPI_URL = os.getenv("FASTAPI_URL", "http://localhost:8002")
 if FASTAPI_URL and not FASTAPI_URL.startswith("http"):
     FASTAPI_URL = f"https://{FASTAPI_URL}"
 
+HF_OCR_URL = os.getenv("HF_OCR_URL", "")
+
 # 페이지 설정
 st.set_page_config(
     page_title="PDF & OCR 웹앱",
@@ -112,6 +114,12 @@ st.markdown("")
 
 # ==================== 이미지 OCR 섹션 ====================
 st.header("2️⃣ 이미지 OCR (EasyOCR)")
+
+if HF_OCR_URL:
+    st.info(
+        f"Render 무료 플랜(512MB)에서는 OCR이 실패할 수 있습니다. "
+        f"[Hugging Face OCR Space]({HF_OCR_URL})에서 안정적으로 테스트하세요."
+    )
 
 # 1:2 비율로 컬럼 생성
 ocr_col1, ocr_col2 = st.columns([1, 2])

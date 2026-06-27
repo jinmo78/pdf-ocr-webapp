@@ -3,7 +3,7 @@ services:
     name: pdf-ocr-api
     runtime: python
     plan: free
-    buildCommand: pip install -r requirements.txt
+    buildCommand: pip install -r requirements-api.txt
     startCommand: uvicorn fastapi_app:app --host 0.0.0.0 --port $PORT
     healthCheckPath: /
     envVars:
@@ -14,7 +14,7 @@ services:
     name: pdf-ocr-app
     runtime: python
     plan: free
-    buildCommand: pip install -r requirements.txt
+    buildCommand: pip install -r requirements-app.txt
     startCommand: streamlit run streamlit_app.py --server.port=$PORT --server.address=0.0.0.0 --server.headless=true
     envVars:
       - key: PYTHON_VERSION
@@ -24,3 +24,5 @@ services:
           type: web
           name: pdf-ocr-api
           property: host
+      - key: HF_OCR_URL
+        value: https://huggingface.co/spaces/kangjinmo/easyocr-ko-en
