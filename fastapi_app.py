@@ -20,14 +20,21 @@ app.add_middleware(
     allow_headers=["*"],
 )
 
-# EasyOCR reader (첫 OCR 요청 시 초기화 — Render 시작 속도 개선)
+# EasyOCR reader (첫 OCR 요청 시 초기화 — Render PDF 전용 배포에서는 미설치)
 reader = None
+OCR_SPACE_URL = "https://huggingface.co/spaces/kangjinmo/easyocr-ko-en"
 
 
 def get_reader():
     global reader
     if reader is None:
-        import easyocr
+        try:
+            import easyocr
+        except ImportError as exc:
+            raise HTTPException(
+                status_code=503,
+                detail=f"Render 무료 플랜 API는 PDF 전용입니다. OCR은 Hugging Face Space에서 이용하세요: {OCR_SPACE_URL}",
+            ) from exc
 
         reader = easyocr.Reader(["ko", "en"], gpu=False)
     return reader

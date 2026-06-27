@@ -161,6 +161,8 @@ with ocr_col1:
                     # 세션 스테이트에 저장
                     st.session_state.ocr_result = result
                     st.success("✅ OCR 처리 완료!")
+                elif response.status_code == 503:
+                    st.warning(response.json().get("detail", "OCR은 Hugging Face Space에서 이용하세요."))
                 else:
                     st.error(f"❌ 오류 발생: {response.json().get('detail', '알 수 없는 오류')}")
                 ########################################

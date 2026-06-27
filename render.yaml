@@ -3,22 +3,19 @@ services:
     name: pdf-ocr-api
     runtime: python
     plan: free
-    buildCommand: pip install -r requirements-api.txt
+    region: oregon
+    buildCommand: pip install --upgrade pip && pip install -r requirements-api.txt
     startCommand: uvicorn fastapi_app:app --host 0.0.0.0 --port $PORT
     healthCheckPath: /
-    envVars:
-      - key: PYTHON_VERSION
-        value: "3.10.11"
 
   - type: web
     name: pdf-ocr-app
     runtime: python
     plan: free
-    buildCommand: pip install -r requirements-app.txt
+    region: oregon
+    buildCommand: pip install --upgrade pip && pip install -r requirements-app.txt
     startCommand: streamlit run streamlit_app.py --server.port=$PORT --server.address=0.0.0.0 --server.headless=true
     envVars:
-      - key: PYTHON_VERSION
-        value: "3.10.11"
       - key: FASTAPI_URL
         fromService:
           type: web
