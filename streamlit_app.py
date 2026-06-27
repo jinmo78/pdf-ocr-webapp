@@ -1,11 +1,14 @@
 import os
 import re
+import json
 import tempfile
 
 import streamlit as st
 import requests
 from PIL import Image
 import io
+
+from receipt_parser import format_receipt_items, parse_receipt_items
 
 # FastAPI 서버 URL 설정 (로컬 기본값, Render에서는 환경 변수로 주입)
 def normalize_fastapi_url(url: str) -> str:
@@ -38,7 +41,7 @@ def get_hf_ocr_client(space_id: str):
     return Client(space_id, hf_token=hf_token)
 
 
-def run_ocr_via_hf_space(image_file, space_url: str) -> dict:
+def run_ocr_via_hf_space(image_file, space_url: str, receipt_mode: bool = False) -> dict:
     from gradio_client import handle_file
 
     space_id = get_hf_space_id(space_url)
@@ -49,15 +52,34 @@ def run_ocr_via_hf_space(image_file, space_url: str) -> dict:
         tmp.write(image_file.getvalue())
         tmp_path = tmp.name
 
-    full_text, details = client.predict(
+    predict_result = client.predict(
         handle_file(tmp_path),
+        receipt_mode,
         api_name="/predict",
     )
+
+    if len(predict_result) == 3:
+        full_text, details, receipt_output = predict_result
+    else:
+        full_text, details = predict_result
+        receipt_output = ""
 
     detections = [
         line for line in details.splitlines()
         if line.strip() and re.match(r"^\d+\.", line.strip())
     ]
+
+    receipt_items = []
+    receipt_text = ""
+    if receipt_mode:
+        if receipt_output.strip().startswith("["):
+            try:
+                receipt_items = json.loads(receipt_output)
+                receipt_text = format_receipt_items(receipt_items)
+            except json.JSONDecodeError:
+                receipt_text = receipt_output
+        else:
+            receipt_text = receipt_output
 
     return {
         "success": True,
@@ -66,6 +88,8 @@ def run_ocr_via_hf_space(image_file, space_url: str) -> dict:
         "detailed_results": [{"text": line} for line in detections],
         "total_detections": len(detections),
         "details_text": details,
+        "receipt_items": receipt_items,
+        "receipt_text": receipt_text,
         "source": "huggingface",
     }
 
@@ -198,6 +222,12 @@ with ocr_col1:
         
         st.success(f"✅ 파일 선택됨: {image_file.name}")
         st.info(f"파일 크기: {image_file.size / 1024:.2f} KB")
+
+        receipt_mode = st.checkbox(
+            "🧾 영수증에서 상품명·금액만 추출",
+            value=False,
+            key="receipt_mode",
+        )
         
         # OCR 버튼
         if st.button("🔍 이미지 OCR 시작", key="ocr_image_btn", use_container_width=True):
@@ -212,7 +242,7 @@ with ocr_col1:
                 ### 필수과제 2-(1): streamlit -> fastapi로 사용자가 업로드한 이미지 파일 파싱 요청
                 try:
                     if HF_OCR_URL:
-                        result = run_ocr_via_hf_space(image_file, HF_OCR_URL)
+                        result = run_ocr_via_hf_space(image_file, HF_OCR_URL, receipt_mode)
                     else:
                         files = {
                             "file": (image_file.name, image_file.getvalue(), f"image/{image_file.type}")
@@ -249,21 +279,32 @@ with ocr_col2:
         with col_b:
             st.metric("파일명", result['filename'][:30] + "..." if len(result['filename']) > 30 else result['filename'])
         
-        # 추출된 전체 텍스트 표시
-        st.text_area(
-            "추출된 전체 텍스트",
-            value=result['extracted_text'],
-            height=300,
-            key="ocr_full_text"
-        )
-
-        if result.get("details_text"):
+        if result.get("receipt_items"):
+            st.markdown("**🧾 상품명 · 금액**")
+            st.dataframe(result["receipt_items"], use_container_width=True)
+        elif result.get("receipt_text"):
             st.text_area(
-                "상세 결과 (신뢰도)",
-                value=result["details_text"],
-                height=200,
-                key="ocr_details_text",
+                "상품명 · 금액",
+                value=result["receipt_text"],
+                height=180,
+                key="ocr_receipt_text",
             )
+
+        with st.expander("전체 OCR 텍스트 보기"):
+            st.text_area(
+                "추출된 전체 텍스트",
+                value=result['extracted_text'],
+                height=200,
+                key="ocr_full_text"
+            )
+
+            if result.get("details_text"):
+                st.text_area(
+                    "상세 결과 (신뢰도)",
+                    value=result["details_text"],
+                    height=160,
+                    key="ocr_details_text",
+                )
     else:
         st.info("👈 왼쪽에서 이미지 파일을 업로드하고 OCR을 시작하세요.")
 
