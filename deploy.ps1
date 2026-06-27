@@ -39,8 +39,8 @@ Render 대시보드에서 Blueprint를 연결하세요:
 - FastAPI: https://pdf-ocr-api.onrender.com
 - Streamlit: https://pdf-ocr-app.onrender.com
 
-참고: FastAPI는 EasyOCR 때문에 Starter 플랜(유료)으로 설정되어 있습니다.
-무료로 테스트하려면 render.yaml에서 pdf-ocr-api의 plan을 free로 변경하세요.
+참고: OCR이 메모리 부족으로 실패하면 Render 대시보드에서
+pdf-ocr-api 서비스의 Instance Type을 Starter(2GB)로 올리세요.
 
 "@ -ForegroundColor Yellow
 
